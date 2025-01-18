@@ -21,8 +21,6 @@ seq:
     repeat-expr: num_lumps
   - id: map_version
     type: s4
-  - id: unknown
-    type: s4
 
 instances:
   num_lumps:
