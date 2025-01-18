@@ -1,2 +1,5 @@
 __pycache__/
 untracked/
+*.bsp
+kaitaistruct.py
+valve_bsp_360.py
