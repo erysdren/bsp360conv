@@ -146,7 +146,7 @@ types:
         if: index == 35
 
 enums:
-  lump:
+  lump_type:
     0: entities
     1: planes
     2: tex_data
