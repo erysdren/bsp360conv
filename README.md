@@ -2,6 +2,8 @@
 
 Convert Xbox 360 Source Engine maps to PC.
 
+NOTE: DOES NOT WORK YET
+
 ## License
 
 MIT License
