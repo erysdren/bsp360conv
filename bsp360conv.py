@@ -17,7 +17,6 @@ for lump in bsp360.lumps:
 	bsp.write(struct.pack("<L", 0)) # size
 	bsp.write(struct.pack("<l", lump.version))
 	bsp.write(struct.pack("<L", 0))
-	# bsp.write(lump.identifier)
 
 # write other header info
 bsp.write(struct.pack("<L", bsp360.map_version))
@@ -70,6 +69,5 @@ for i, lump in enumerate(bsp360.lumps):
 	bsp.write(struct.pack("<L", lumps[i][1])) # size
 	bsp.write(struct.pack("<l", lump.version))
 	bsp.write(struct.pack("<L", 0))
-	# bsp.write(lump.identifier)
 
 bsp.close()
