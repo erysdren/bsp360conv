@@ -39,7 +39,7 @@ for i, lump in enumerate(bsp360.lumps):
 			bsp.write(struct.pack("<H", game_lump.version))
 			bsp.write(struct.pack("<L", 0))
 			bsp.write(struct.pack("<L", 0))
-		for g, game_lump in enumerate(lump.game_lumps.lumps):
+		for game_lump in lump.game_lumps.lumps:
 			if game_lump.len_data <= 0:
 				game_lumps.append((0, 0))
 			elif game_lump.is_lzma:
