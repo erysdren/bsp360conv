@@ -20,7 +20,6 @@ for lump in bsp360.lumps:
 
 # write other header info
 bsp.write(struct.pack("<L", bsp360.map_version))
-bsp.write(struct.pack("<L", bsp360.unknown))
 
 # write lump data
 lumps = []
