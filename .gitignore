@@ -1,5 +1,6 @@
 __pycache__/
 untracked/
 examples/
+*.bsp
 kaitaistruct.py
 bsp360.py
