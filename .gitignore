@@ -3,5 +3,9 @@ untracked/
 examples/
 *.bsp
 *.zip
+*.o
+*.obj
+*.exe
+bsp360conv
 kaitaistruct.py
 bsp360.py
