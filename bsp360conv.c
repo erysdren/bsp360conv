@@ -91,10 +91,9 @@ static void *decompress_lzma(SDL_IOStream *io, Sint64 *size)
 
 	/* do decompression */
 	bool error = false;
-	lzma_action action = LZMA_RUN;
 	while (1)
 	{
-		ret = lzma_code(&decoder, action);
+		ret = lzma_code(&decoder, LZMA_RUN);
 
 		if (decoder.avail_out == 0 || ret == LZMA_STREAM_END)
 		{
