@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 		if (!inputIo)
 		{
 			log_warning("Failed to open \"%s\" for reading", argv[arg]);
-			continue;
+			goto cleanup;
 		}
 
 		/* open temporary buffer for writing */
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 		if (!outputIo)
 		{
 			log_warning("Failed to create output buffer");
-			continue;
+			goto cleanup;
 		}
 
 		/* read input header */
@@ -113,9 +113,7 @@ int main(int argc, char **argv)
 		if (inputHeader.magic != BSP_MAGIC || inputHeader.version != BSP_VERSION)
 		{
 			log_warning("\"%s\" has incorrect magic value or version", argv[arg]);
-			SDL_CloseIO(inputIo);
-			SDL_CloseIO(outputIo);
-			continue;
+			goto cleanup;
 		}
 
 		/* write initial output header */
@@ -137,8 +135,9 @@ int main(int argc, char **argv)
 			log_info("Successfully Saved \"%s\"", outputFilename);
 
 		/* clean up */
-		SDL_CloseIO(inputIo);
-		SDL_CloseIO(outputIo);
+cleanup:
+		if (inputIo) SDL_CloseIO(inputIo);
+		if (outputIo) SDL_CloseIO(outputIo);
 	}
 
 	SDL_Quit();
