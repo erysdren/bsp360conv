@@ -215,21 +215,64 @@ int main(int argc, char **argv)
 			goto cleanup;
 		}
 
-		/* lzma test */
+		/* write initial output header */
+		write_bsp_header(outputIo, &inputHeader);
+
+		/* rewrite all lumps, decompress if needed */
 		for (int lump = 0; lump < BSP_NUM_LUMPS; lump++)
 		{
+			/* seek to lump data position */
+			SDL_SeekIO(inputIo, inputHeader.lumps[lump].offset, SDL_IO_SEEK_SET);
+
+			/* they use the identifier to show that its compressed... for some reason */
 			if (inputHeader.lumps[lump].identifier > 0)
 			{
-				SDL_SeekIO(inputIo, inputHeader.lumps[lump].offset, SDL_IO_SEEK_SET);
+				/* decompress lzma stuff */
 				Sint64 uncompressed_size = -1;
 				void *uncompressed = decompress_lzma(inputIo, &uncompressed_size);
 
-				if (uncompressed && uncompressed_size > 0)
+				/* catch errors */
+				if (uncompressed == NULL)
+				{
+					log_warning("Lump %d: Failed to decompress", lump);
+					goto cleanup;
+				}
+				else if (inputHeader.lumps[lump].identifier != uncompressed_size)
+				{
 					SDL_free(uncompressed);
+					log_warning("Lump %d: Size mismatch %d != %d", lump, inputHeader.lumps[lump].identifier, uncompressed_size);
+					goto cleanup;
+				}
+
+				/* save new offset and size */
+				inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
+				inputHeader.lumps[lump].length = uncompressed_size;
+
+				/* write lump data */
+				SDL_WriteIO(outputIo, uncompressed, uncompressed_size);
+
+				/* clean up */
+				SDL_free(uncompressed);
+			}
+			else
+			{
+				/* read lump data */
+				void *lump_data = SDL_malloc(inputHeader.lumps[lump].length);
+				SDL_ReadIO(inputIo, lump_data, inputHeader.lumps[lump].length);
+
+				/* save new offset */
+				inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
+
+				/* write lump data */
+				SDL_WriteIO(outputIo, lump_data, inputHeader.lumps[lump].length);
+
+				/* clean up */
+				SDL_free(lump_data);
 			}
 		}
 
-		/* write initial output header */
+		/* rewrite output header */
+		SDL_SeekIO(outputIo, 0, SDL_IO_SEEK_SET);
 		write_bsp_header(outputIo, &inputHeader);
 
 		/* get output filename */
