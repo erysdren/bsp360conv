@@ -4,7 +4,7 @@ PKGCONFIG?=pkg-config
 PKGS?=sdl3
 
 override CFLAGS+=$(shell $(PKGCONFIG) --cflags $(PKGS)) -g3
-override LDFLAGS+=$(shell $(PKGCONFIG) --libs $(PKGS)) -llz
+override LDFLAGS+=$(shell $(PKGCONFIG) --libs $(PKGS)) -llzma
 
 BINEXT?=
 OBJEXT?=.o
