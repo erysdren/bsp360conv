@@ -4,9 +4,6 @@
 #include "decompress_lzma.h"
 #include "utils.h"
 
-#define log_warning(...) SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)
-#define log_info(...) SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)
-
 #define BSP_MAGIC 0x50534256
 #define BSP_VERSION 20
 #define BSP_NUM_LUMPS 64
