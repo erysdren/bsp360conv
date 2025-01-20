@@ -411,7 +411,7 @@ int main(int argc, char **argv)
 				/* clean up */
 				SDL_free(uncompressed);
 			}
-			else
+			else if (inputHeader.lumps[lump].length > 0)
 			{
 				/* read lump data */
 				void *lump_data = SDL_malloc(inputHeader.lumps[lump].length);
