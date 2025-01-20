@@ -386,16 +386,23 @@ int main(int argc, char **argv)
 					goto cleanup;
 				}
 
-				/* save new offset and size */
-				inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
-				inputHeader.lumps[lump].length = uncompressed_size;
 
 				/* byteswap data */
 				if (!swap_lump(lump, uncompressed, uncompressed_size))
+				{
 					log_warning("Lump %d: Failed to byteswap data", lump);
+					inputHeader.lumps[lump].offset = 0;
+					inputHeader.lumps[lump].length = 0;
+				}
+				else
+				{
+					/* save new offset and size */
+					inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
+					inputHeader.lumps[lump].length = uncompressed_size;
 
-				/* write lump data */
-				SDL_WriteIO(outputIo, uncompressed, uncompressed_size);
+					/* write lump data */
+					SDL_WriteIO(outputIo, uncompressed, uncompressed_size);
+				}
 
 				/* clean up */
 				SDL_free(uncompressed);
@@ -406,15 +413,21 @@ int main(int argc, char **argv)
 				void *lump_data = SDL_malloc(inputHeader.lumps[lump].length);
 				SDL_ReadIO(inputIo, lump_data, inputHeader.lumps[lump].length);
 
-				/* save new offset */
-				inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
-
 				/* byteswap data */
 				if (!swap_lump(lump, lump_data, inputHeader.lumps[lump].length))
+				{
 					log_warning("Lump %d: Failed to byteswap data", lump);
+					inputHeader.lumps[lump].offset = 0;
+					inputHeader.lumps[lump].length = 0;
+				}
+				else
+				{
+					/* save new offset */
+					inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
 
-				/* write lump data */
-				SDL_WriteIO(outputIo, lump_data, inputHeader.lumps[lump].length);
+					/* write lump data */
+					SDL_WriteIO(outputIo, lump_data, inputHeader.lumps[lump].length);
+				}
 
 				/* clean up */
 				SDL_free(lump_data);
