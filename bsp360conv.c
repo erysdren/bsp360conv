@@ -11,15 +11,13 @@
 
 #define LZMA_MAGIC 0x414d5a4c
 
-typedef struct lzma_header
-{
+typedef struct lzma_header {
 	Uint8 properties;
 	Uint32 dictionary_size;
 	Uint64 uncompressed_size;
 } __attribute__((packed)) lzma_header_t;
 
-typedef struct lzma_source_header
-{
+typedef struct lzma_source_header {
 	Uint32 magic;
 	Uint32 uncompressed_size;
 	Uint32 compressed_size;
