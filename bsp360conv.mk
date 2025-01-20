@@ -10,7 +10,7 @@ BINEXT?=
 OBJEXT?=.o
 
 EXEC?=bsp360conv$(BINEXT)
-OBJS=bsp360conv$(OBJEXT) decompress_lzma$(OBJEXT)
+OBJS=bsp360conv$(OBJEXT) decompress_lzma$(OBJEXT) utils$(OBJEXT)
 
 all: $(EXEC)
 

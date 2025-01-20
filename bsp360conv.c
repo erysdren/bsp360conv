@@ -2,6 +2,7 @@
 #include <SDL3/SDL.h>
 
 #include "decompress_lzma.h"
+#include "utils.h"
 
 #define log_warning(...) SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)
 #define log_info(...) SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)
@@ -306,14 +307,6 @@ static void write_bsp_header(SDL_IOStream *io, bsp_header_t *header)
 	for (int lump = 0; lump < BSP_NUM_LUMPS; lump++)
 		write_bsp_lump(io, &header->lumps[lump]);
 	SDL_WriteU32LE(io, header->map_version);
-}
-
-static bool string_endswith(const char *s, const char *e)
-{
-	size_t elen = SDL_strlen(e);
-	size_t slen = SDL_strlen(s);
-	if (elen > slen) return false;
-	return SDL_strcmp(s + slen - elen, e) == 0 ? true : false;
 }
 
 static void make_output_filename(const char *input, char *output, size_t output_size)
