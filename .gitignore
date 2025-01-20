@@ -7,5 +7,6 @@ examples/
 *.obj
 *.exe
 bsp360conv
+zip360conv
 kaitaistruct.py
 bsp360.py
