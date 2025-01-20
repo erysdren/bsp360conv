@@ -189,11 +189,9 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* unknown lump */
 		default:
 		{
-			return true;
+			return false;
 		}
 	}
-
-	return true;
 }
 
 static void *decompress_lzma(SDL_IOStream *io, Sint64 *size)
