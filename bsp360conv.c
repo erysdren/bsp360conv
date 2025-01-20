@@ -41,6 +41,161 @@ typedef struct bsp_header {
 	Uint32 map_version;
 } bsp_header_t;
 
+typedef struct vector {
+	float x;
+	float y;
+	float z;
+} vector_t;
+
+typedef struct plane {
+	vector_t normal;
+	float dist;
+	Sint32 type;
+} plane_t;
+
+typedef struct edge {
+	Uint16 indices[2];
+} edge_t;
+
+typedef struct brush {
+	Sint32 first_side;
+	Sint32 num_sides;
+	Sint32 contents;
+} brush_t;
+
+typedef struct brushside {
+	Uint16 plane_num;
+	Sint16 tex_info;
+	Sint16 disp_info;
+	Sint16 bevel;
+} brushside_t;
+
+static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
+{
+	switch (lump)
+	{
+		/* entities */
+		case 0:
+		{
+			return true;
+		}
+
+		/* planes */
+		case 1:
+		{
+			/* test for funny lump size */
+			if (lump_size % sizeof(plane_t) != 0)
+				return false;
+
+			plane_t *planes = (plane_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(plane_t); i++)
+			{
+				planes[i].normal.x = SDL_SwapFloat(planes[i].normal.x);
+				planes[i].normal.y = SDL_SwapFloat(planes[i].normal.y);
+				planes[i].normal.z = SDL_SwapFloat(planes[i].normal.z);
+				planes[i].dist = SDL_SwapFloat(planes[i].dist);
+				planes[i].type = SDL_Swap32(planes[i].type);
+			}
+
+			return true;
+		}
+
+		/* vertices */
+		case 3:
+		{
+			/* test for funny lump size */
+			if (lump_size % sizeof(vector_t) != 0)
+				return false;
+
+			vector_t *vertices = (vector_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(vector_t); i++)
+			{
+				vertices[i].x = SDL_SwapFloat(vertices[i].x);
+				vertices[i].y = SDL_SwapFloat(vertices[i].y);
+				vertices[i].z = SDL_SwapFloat(vertices[i].z);
+			}
+
+			return true;
+		}
+
+		/* edges */
+		case 12:
+		{
+			/* test for funny lump size */
+			if (lump_size % sizeof(edge_t) != 0)
+				return false;
+
+			edge_t *edges = (edge_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(edge_t); i++)
+			{
+				edges[i].indices[0] = SDL_Swap16(edges[i].indices[0]);
+				edges[i].indices[1] = SDL_Swap16(edges[i].indices[1]);
+			}
+
+			return true;
+		}
+
+		/* surfedges */
+		case 13:
+		{
+			/* test for funny lump size */
+			if (lump_size % sizeof(Sint32) != 0)
+				return false;
+
+			Sint32 *surfedges = (Sint32 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Sint32); i++)
+				surfedges[i] = SDL_Swap32(surfedges[i]);
+
+			return true;
+		}
+
+		/* brushes */
+		case 18:
+		{
+			/* test for funny lump size */
+			if (lump_size % sizeof(brush_t) != 0)
+				return false;
+
+			brush_t *brushes = (brush_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(brush_t); i++)
+			{
+				brushes[i].first_side = SDL_Swap32(brushes[i].first_side);
+				brushes[i].num_sides = SDL_Swap32(brushes[i].num_sides);
+				brushes[i].contents = SDL_Swap32(brushes[i].contents);
+			}
+
+			return true;
+		}
+
+		/* brushsides */
+		case 19:
+		{
+			/* test for funny lump size */
+			if (lump_size % sizeof(brushside_t) != 0)
+				return false;
+
+			brushside_t *brushsides = (brushside_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(brushside_t); i++)
+			{
+				brushsides[i].plane_num = SDL_Swap16(brushsides[i].plane_num);
+				brushsides[i].tex_info = SDL_Swap16(brushsides[i].tex_info);
+				brushsides[i].disp_info = SDL_Swap16(brushsides[i].disp_info);
+				brushsides[i].bevel = SDL_Swap16(brushsides[i].bevel);
+			}
+
+			return true;
+		}
+
+		/* unknown lump */
+		default:
+		{
+			return true;
+		}
+	}
+
+	return true;
+}
+
 static void *decompress_lzma(SDL_IOStream *io, Sint64 *size)
 {
 	/* validate magic */
@@ -248,6 +403,10 @@ int main(int argc, char **argv)
 				inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
 				inputHeader.lumps[lump].length = uncompressed_size;
 
+				/* byteswap data */
+				if (!swap_lump(lump, uncompressed, uncompressed_size))
+					log_warning("Lump %d: Failed to byteswap data", lump);
+
 				/* write lump data */
 				SDL_WriteIO(outputIo, uncompressed, uncompressed_size);
 
@@ -262,6 +421,10 @@ int main(int argc, char **argv)
 
 				/* save new offset */
 				inputHeader.lumps[lump].offset = SDL_TellIO(outputIo);
+
+				/* byteswap data */
+				if (!swap_lump(lump, lump_data, inputHeader.lumps[lump].length))
+					log_warning("Lump %d: Failed to byteswap data", lump);
 
 				/* write lump data */
 				SDL_WriteIO(outputIo, lump_data, inputHeader.lumps[lump].length);
