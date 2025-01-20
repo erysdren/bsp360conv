@@ -70,8 +70,34 @@ typedef struct brushside {
 	Sint16 bevel;
 } brushside_t;
 
+typedef struct texdata {
+	vector_t reflectivity;
+	Sint32 name_index;
+	Sint32 width, height;
+	Sint32 view_width, view_height;
+} texdata_t;
+
+typedef struct texinfo {
+	float texture_vectors[2][4];
+	float lightmap_vectors[2][4];
+	Sint32 flags;
+	Sint32 tex_data;
+} texinfo_t;
+
+typedef struct node {
+	Sint32 plane_num;
+	Sint32 children[2];
+	Sint16 mins[3];
+	Sint16 maxs[3];
+	Uint16 first_face;
+	Uint16 num_faces;
+	Sint16 area;
+	Sint16 pad;
+} node_t;
+
 static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 {
+#define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
 	switch (lump)
 	{
 		/* entities */
@@ -83,9 +109,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* planes */
 		case 1:
 		{
-			/* test for funny lump size */
-			if (lump_size % sizeof(plane_t) != 0)
-				return false;
+			CHECK_FUNNY_LUMP_SIZE(sizeof(plane_t));
 
 			plane_t *planes = (plane_t *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(plane_t); i++)
@@ -100,12 +124,31 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			return true;
 		}
 
+		/* texdata */
+		case 2:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(texdata_t));
+
+			texdata_t *texdata = (texdata_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(texdata_t); i++)
+			{
+				texdata[i].reflectivity.x = SDL_SwapFloat(texdata[i].reflectivity.x);
+				texdata[i].reflectivity.y = SDL_SwapFloat(texdata[i].reflectivity.y);
+				texdata[i].reflectivity.z = SDL_SwapFloat(texdata[i].reflectivity.z);
+				texdata[i].name_index = SDL_Swap32(texdata[i].name_index);
+				texdata[i].width = SDL_Swap32(texdata[i].width);
+				texdata[i].height = SDL_Swap32(texdata[i].height);
+				texdata[i].view_width = SDL_Swap32(texdata[i].view_width);
+				texdata[i].view_height = SDL_Swap32(texdata[i].view_height);
+			}
+
+			return true;
+		}
+
 		/* vertices */
 		case 3:
 		{
-			/* test for funny lump size */
-			if (lump_size % sizeof(vector_t) != 0)
-				return false;
+			CHECK_FUNNY_LUMP_SIZE(sizeof(vector_t));
 
 			vector_t *vertices = (vector_t *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(vector_t); i++)
@@ -118,12 +161,71 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			return true;
 		}
 
+		/* vis */
+		case 4:
+		{
+			Sint32 *vis = (Sint32 *)lump_data;
+			vis[0] = SDL_Swap32(vis[0]);
+			for (int i = 0; i < vis[0] * 2; i++)
+				vis[i + 1] = SDL_Swap32(vis[i + 1]);
+
+			return true;
+		}
+
+		/* nodes */
+		case 5:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(node_t));
+
+			node_t *nodes = (node_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(node_t); i++)
+			{
+				nodes[i].plane_num = SDL_Swap32(nodes[i].plane_num);
+				nodes[i].children[0] = SDL_Swap32(nodes[i].children[0]);
+				nodes[i].children[1] = SDL_Swap32(nodes[i].children[1]);
+				nodes[i].mins[0] = SDL_Swap16(nodes[i].mins[0]);
+				nodes[i].mins[1] = SDL_Swap16(nodes[i].mins[1]);
+				nodes[i].mins[2] = SDL_Swap16(nodes[i].mins[2]);
+				nodes[i].maxs[0] = SDL_Swap16(nodes[i].maxs[0]);
+				nodes[i].maxs[1] = SDL_Swap16(nodes[i].maxs[1]);
+				nodes[i].maxs[2] = SDL_Swap16(nodes[i].maxs[2]);
+				nodes[i].first_face = SDL_Swap16(nodes[i].first_face);
+				nodes[i].num_faces = SDL_Swap16(nodes[i].num_faces);
+				nodes[i].area = SDL_Swap16(nodes[i].area);
+				nodes[i].pad = SDL_Swap16(nodes[i].pad);
+			}
+
+			return true;
+		}
+
+		/* texinfos */
+		case 6:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(texinfo_t));
+
+			texinfo_t *texinfos = (texinfo_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(texinfo_t); i++)
+			{
+				for (int j = 0; j < 2; j++)
+				{
+					for (int k = 0; k < 4; k++)
+					{
+						texinfos[i].texture_vectors[j][k] = SDL_SwapFloat(texinfos[i].texture_vectors[j][k]);
+						texinfos[i].lightmap_vectors[j][k] = SDL_SwapFloat(texinfos[i].lightmap_vectors[j][k]);
+					}
+				}
+
+				texinfos[i].flags = SDL_Swap32(texinfos[i].flags);
+				texinfos[i].tex_data = SDL_Swap32(texinfos[i].tex_data);
+			}
+
+			return true;
+		}
+
 		/* edges */
 		case 12:
 		{
-			/* test for funny lump size */
-			if (lump_size % sizeof(edge_t) != 0)
-				return false;
+			CHECK_FUNNY_LUMP_SIZE(sizeof(edge_t));
 
 			edge_t *edges = (edge_t *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(edge_t); i++)
@@ -138,9 +240,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* surfedges */
 		case 13:
 		{
-			/* test for funny lump size */
-			if (lump_size % sizeof(Sint32) != 0)
-				return false;
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Sint32));
 
 			Sint32 *surfedges = (Sint32 *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(Sint32); i++)
@@ -152,9 +252,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* brushes */
 		case 18:
 		{
-			/* test for funny lump size */
-			if (lump_size % sizeof(brush_t) != 0)
-				return false;
+			CHECK_FUNNY_LUMP_SIZE(sizeof(brush_t));
 
 			brush_t *brushes = (brush_t *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(brush_t); i++)
@@ -170,9 +268,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* brushsides */
 		case 19:
 		{
-			/* test for funny lump size */
-			if (lump_size % sizeof(brushside_t) != 0)
-				return false;
+			CHECK_FUNNY_LUMP_SIZE(sizeof(brushside_t));
 
 			brushside_t *brushsides = (brushside_t *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(brushside_t); i++)
@@ -192,6 +288,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			return false;
 		}
 	}
+#undef CHECK_FUNNY_LUMP_SIZE
 }
 
 static void *decompress_lzma(SDL_IOStream *io, Sint64 *size)
