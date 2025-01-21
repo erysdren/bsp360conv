@@ -121,9 +121,60 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 #define SWAPFLOAT(x) x = SDL_SwapFloat(x)
 	switch (lump)
 	{
-		/* entities */
+		/* byte-sized data */
 		case 0:
+		case 34:
+		case 43:
 		{
+			return true;
+		}
+
+		/* short-sized data */
+		case 12:
+		case 16:
+		case 17:
+		case 19:
+		case 31:
+		case 46:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
+
+			Uint16 *values = (Uint16 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Uint16); i++)
+				SWAP16(values[i]);
+
+			return true;
+		}
+
+		/* int-sized data */
+		case 4:
+		case 13:
+		case 18:
+		case 20:
+		case 44:
+		case 59:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint32));
+
+			Uint32 *values = (Uint32 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Uint32); i++)
+				SWAP32(values[i]);
+
+			return true;
+		}
+
+		/* float-sized data */
+		case 3:
+		case 30:
+		case 41:
+		case 60:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(float));
+
+			float *values = (float *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(float); i++)
+				SWAPFLOAT(values[i]);
+
 			return true;
 		}
 
@@ -162,33 +213,6 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				SWAP32(texdata[i].view_width);
 				SWAP32(texdata[i].view_height);
 			}
-
-			return true;
-		}
-
-		/* vertices */
-		case 3:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(vector_t));
-
-			vector_t *vertices = (vector_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(vector_t); i++)
-			{
-				SWAPFLOAT(vertices[i].x);
-				SWAPFLOAT(vertices[i].y);
-				SWAPFLOAT(vertices[i].z);
-			}
-
-			return true;
-		}
-
-		/* vis */
-		case 4:
-		{
-			Sint32 *vis = (Sint32 *)lump_data;
-			SWAP32(vis[0]);
-			for (int i = 0; i < vis[0] * 2; i++)
-				SWAP32(vis[i + 1]);
 
 			return true;
 		}
@@ -243,35 +267,9 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			return true;
 		}
 
-		/* edges */
-		case 12:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(edge_t));
-
-			edge_t *edges = (edge_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(edge_t); i++)
-			{
-				SWAP16(edges[i].indices[0]);
-				SWAP16(edges[i].indices[1]);
-			}
-
-			return true;
-		}
-
-		/* surfedges */
-		case 13:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(Sint32));
-
-			Sint32 *surfedges = (Sint32 *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(Sint32); i++)
-				SWAP32(surfedges[i]);
-
-			return true;
-		}
-
-		/* world lights */
+		/* world lights (ldr and hdr) */
 		case 15:
+		case 54:
 		{
 			CHECK_FUNNY_LUMP_SIZE(sizeof(worldlight_t));
 
@@ -305,78 +303,6 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			return true;
 		}
 
-		/* leaf faces */
-		case 16:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
-
-			Uint16 *leaffaces = (Uint16 *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(Uint16); i++)
-				SWAP16(leaffaces[i]);
-
-			return true;
-		}
-
-		/* leaf brushes */
-		case 17:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
-
-			Uint16 *leafbrushes = (Uint16 *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(Uint16); i++)
-				SWAP16(leafbrushes[i]);
-
-			return true;
-		}
-
-		/* brushes */
-		case 18:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(brush_t));
-
-			brush_t *brushes = (brush_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(brush_t); i++)
-			{
-				SWAP32(brushes[i].first_side);
-				SWAP32(brushes[i].num_sides);
-				SWAP32(brushes[i].contents);
-			}
-
-			return true;
-		}
-
-		/* brushsides */
-		case 19:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(brushside_t));
-
-			brushside_t *brushsides = (brushside_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(brushside_t); i++)
-			{
-				SWAP16(brushsides[i].plane_num);
-				SWAP16(brushsides[i].tex_info);
-				SWAP16(brushsides[i].disp_info);
-				SWAP16(brushsides[i].bevel);
-			}
-
-			return true;
-		}
-
-		/* areas */
-		case 20:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(area_t));
-
-			area_t *areas = (area_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(area_t); i++)
-			{
-				SWAP32(areas[i].num_areaportals);
-				SWAP32(areas[i].first_areaportal);
-			}
-
-			return true;
-		}
-
 		/* areaportals */
 		case 21:
 		{
@@ -390,118 +316,6 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				SWAP16(areaportals[i].first_clip_vert);
 				SWAP16(areaportals[i].num_clip_verts);
 				SWAP32(areaportals[i].plane_num);
-			}
-
-			return true;
-		}
-
-		/* original faces */
-		case 27:
-		{
-			return false;
-		}
-
-		/* vertex normals */
-		case 30:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(vector_t));
-
-			vector_t *normals = (vector_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(vector_t); i++)
-			{
-				SWAPFLOAT(normals[i].x);
-				SWAPFLOAT(normals[i].y);
-				SWAPFLOAT(normals[i].z);
-			}
-
-			return true;
-		}
-
-		/* vertex normal indices */
-		case 31:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(Sint16));
-
-			Sint16 *indices = (Sint16 *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(Sint16); i++)
-				SWAP16(indices[i]);
-
-			return true;
-		}
-
-		/* displacement lightmap sample positions */
-		case 34:
-		{
-			return true;
-		}
-
-		/* clip portal vertices */
-		case 41:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(vector_t));
-
-			vector_t *vertices = (vector_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(vector_t); i++)
-			{
-				SWAPFLOAT(vertices[i].x);
-				SWAPFLOAT(vertices[i].y);
-				SWAPFLOAT(vertices[i].z);
-			}
-
-			return true;
-		}
-
-		/* texdata string data */
-		case 43:
-		{
-			return true;
-		}
-
-		/* texdata string table */
-		case 44:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(Sint32));
-
-			Sint32 *indices = (Sint32 *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(Sint32); i++)
-				SWAP32(indices[i]);
-
-			return true;
-		}
-
-		/* leaf distances to water */
-		case 46:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
-
-			Uint16 *dists = (Uint16 *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(Uint16); i++)
-				SWAP16(dists[i]);
-
-			return true;
-		}
-
-		/* map flags */
-		case 59:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint32));
-
-			Uint32 *flags = (Uint32 *)lump_data;
-			SWAP32(flags[0]);
-
-			return true;
-		}
-
-		/* overlay fades */
-		case 60:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(overlay_fade_t));
-
-			overlay_fade_t *overlay_fades = (overlay_fade_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(overlay_fade_t); i++)
-			{
-				SWAPFLOAT(overlay_fades[i].min);
-				SWAPFLOAT(overlay_fades[i].max);
 			}
 
 			return true;
