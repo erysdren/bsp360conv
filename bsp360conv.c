@@ -113,6 +113,19 @@ typedef struct worldlight {
 	Sint32 owner;
 } worldlight_t;
 
+typedef struct leaf {
+	Sint32 contents;
+	Sint16 cluster;
+	Uint16 flags;
+	Sint16 mins[3];
+	Sint16 maxs[3];
+	Uint16 first_leaf_face;
+	Uint16 num_leaf_faces;
+	Uint16 first_leaf_brush;
+	Uint16 num_leaf_brushes;
+	Sint16 leaf_water_id;
+} leaf_t;
+
 static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
@@ -123,19 +136,26 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 	{
 		/* byte-sized data */
 		case 0:
+		case 8:
 		case 34:
 		case 43:
+		case 53:
+		case 55:
+		case 56:
 		{
 			return true;
 		}
 
 		/* short-sized data */
+		case 11:
 		case 12:
 		case 16:
 		case 17:
 		case 19:
 		case 31:
 		case 46:
+		case 51:
+		case 52:
 		{
 			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
 
@@ -265,6 +285,46 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			}
 
 			return true;
+		}
+
+		/* occlusion lump */
+		case 9:
+		{
+			return false;
+		}
+
+		/* leafs */
+		case 10:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(leaf_t));
+
+			leaf_t *leafs = (leaf_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(leaf_t); i++)
+			{
+				SWAP32(leafs[i].contents);
+				SWAP16(leafs[i].cluster);
+				SWAP16(leafs[i].flags);
+				SWAP16(leafs[i].mins[0]);
+				SWAP16(leafs[i].mins[1]);
+				SWAP16(leafs[i].mins[2]);
+				SWAP16(leafs[i].maxs[0]);
+				SWAP16(leafs[i].maxs[1]);
+				SWAP16(leafs[i].maxs[2]);
+				SWAP16(leafs[i].first_leaf_face);
+				SWAP16(leafs[i].num_leaf_faces);
+				SWAP16(leafs[i].first_leaf_brush);
+				SWAP16(leafs[i].num_leaf_brushes);
+				SWAP16(leafs[i].leaf_water_id);
+			}
+
+			return true;
+		}
+
+		/* faces (ldr and hdr) */
+		case 7:
+		case 58:
+		{
+			return false;
 		}
 
 		/* world lights (ldr and hdr) */
