@@ -76,6 +76,11 @@ typedef struct node {
 	Sint16 pad;
 } node_t;
 
+typedef struct overlay_fade {
+	float min;
+	float max;
+} overlay_fade_t;
+
 static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
@@ -258,6 +263,32 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				brushsides[i].tex_info = SDL_Swap16(brushsides[i].tex_info);
 				brushsides[i].disp_info = SDL_Swap16(brushsides[i].disp_info);
 				brushsides[i].bevel = SDL_Swap16(brushsides[i].bevel);
+			}
+
+			return true;
+		}
+
+		/* map flags */
+		case 59:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint32));
+
+			Uint32 *flags = (Uint32 *)lump_data;
+			flags[0] = SDL_Swap32(flags[0]);
+
+			return true;
+		}
+
+		/* overlay fades */
+		case 60:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(overlay_fade_t));
+
+			overlay_fade_t *overlay_fades = (overlay_fade_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(overlay_fade_t); i++)
+			{
+				overlay_fades[i].min = SDL_SwapFloat(overlay_fades[i].min);
+				overlay_fades[i].max = SDL_SwapFloat(overlay_fades[i].max);
 			}
 
 			return true;
