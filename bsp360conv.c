@@ -81,6 +81,38 @@ typedef struct overlay_fade {
 	float max;
 } overlay_fade_t;
 
+typedef struct area {
+	Sint32 num_areaportals;
+	Sint32 first_areaportal;
+} area_t;
+
+typedef struct areaportal {
+	Uint16 portal_key;
+	Uint16 other_area;
+	Uint16 first_clip_vert;
+	Uint16 num_clip_verts;
+	Sint32 plane_num;
+} areaportal_t;
+
+typedef struct worldlight {
+	vector_t origin;
+	vector_t intensity;
+	vector_t normal;
+	Sint32 cluster;
+	Sint32 type;
+	Sint32 style;
+	float stop_dot;
+	float stop_dot_2;
+	float exponent;
+	float radius;
+	float constant_attenuation;
+	float linear_attenuation;
+	float quadratic_attenuation;
+	Sint32 flags;
+	Sint32 tex_info;
+	Sint32 owner;
+} worldlight_t;
+
 static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
@@ -238,6 +270,65 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			return true;
 		}
 
+		/* world lights */
+		case 15:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(worldlight_t));
+
+			worldlight_t *worldlights = (worldlight_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(worldlight_t); i++)
+			{
+				SWAPFLOAT(worldlights[i].origin.x);
+				SWAPFLOAT(worldlights[i].origin.y);
+				SWAPFLOAT(worldlights[i].origin.z);
+				SWAPFLOAT(worldlights[i].intensity.x);
+				SWAPFLOAT(worldlights[i].intensity.y);
+				SWAPFLOAT(worldlights[i].intensity.z);
+				SWAPFLOAT(worldlights[i].normal.x);
+				SWAPFLOAT(worldlights[i].normal.y);
+				SWAPFLOAT(worldlights[i].normal.z);
+				SWAP32(worldlights[i].cluster);
+				SWAP32(worldlights[i].type);
+				SWAP32(worldlights[i].style);
+				SWAPFLOAT(worldlights[i].stop_dot);
+				SWAPFLOAT(worldlights[i].stop_dot_2);
+				SWAPFLOAT(worldlights[i].exponent);
+				SWAPFLOAT(worldlights[i].radius);
+				SWAPFLOAT(worldlights[i].constant_attenuation);
+				SWAPFLOAT(worldlights[i].linear_attenuation);
+				SWAPFLOAT(worldlights[i].quadratic_attenuation);
+				SWAP32(worldlights[i].flags);
+				SWAP32(worldlights[i].tex_info);
+				SWAP32(worldlights[i].owner);
+			}
+
+			return true;
+		}
+
+		/* leaf faces */
+		case 16:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
+
+			Uint16 *leaffaces = (Uint16 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Uint16); i++)
+				SWAP16(leaffaces[i]);
+
+			return true;
+		}
+
+		/* leaf brushes */
+		case 17:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
+
+			Uint16 *leafbrushes = (Uint16 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Uint16); i++)
+				SWAP16(leafbrushes[i]);
+
+			return true;
+		}
+
 		/* brushes */
 		case 18:
 		{
@@ -267,6 +358,125 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				SWAP16(brushsides[i].disp_info);
 				SWAP16(brushsides[i].bevel);
 			}
+
+			return true;
+		}
+
+		/* areas */
+		case 20:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(area_t));
+
+			area_t *areas = (area_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(area_t); i++)
+			{
+				SWAP32(areas[i].num_areaportals);
+				SWAP32(areas[i].first_areaportal);
+			}
+
+			return true;
+		}
+
+		/* areaportals */
+		case 21:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(areaportal_t));
+
+			areaportal_t *areaportals = (areaportal_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(areaportal_t); i++)
+			{
+				SWAP16(areaportals[i].portal_key);
+				SWAP16(areaportals[i].other_area);
+				SWAP16(areaportals[i].first_clip_vert);
+				SWAP16(areaportals[i].num_clip_verts);
+				SWAP32(areaportals[i].plane_num);
+			}
+
+			return true;
+		}
+
+		/* original faces */
+		case 27:
+		{
+			return false;
+		}
+
+		/* vertex normals */
+		case 30:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(vector_t));
+
+			vector_t *normals = (vector_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(vector_t); i++)
+			{
+				SWAPFLOAT(normals[i].x);
+				SWAPFLOAT(normals[i].y);
+				SWAPFLOAT(normals[i].z);
+			}
+
+			return true;
+		}
+
+		/* vertex normal indices */
+		case 31:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Sint16));
+
+			Sint16 *indices = (Sint16 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Sint16); i++)
+				SWAP16(indices[i]);
+
+			return true;
+		}
+
+		/* displacement lightmap sample positions */
+		case 34:
+		{
+			return true;
+		}
+
+		/* clip portal vertices */
+		case 41:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(vector_t));
+
+			vector_t *vertices = (vector_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(vector_t); i++)
+			{
+				SWAPFLOAT(vertices[i].x);
+				SWAPFLOAT(vertices[i].y);
+				SWAPFLOAT(vertices[i].z);
+			}
+
+			return true;
+		}
+
+		/* texdata string data */
+		case 43:
+		{
+			return true;
+		}
+
+		/* texdata string table */
+		case 44:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Sint32));
+
+			Sint32 *indices = (Sint32 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Sint32); i++)
+				SWAP32(indices[i]);
+
+			return true;
+		}
+
+		/* leaf distances to water */
+		case 46:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
+
+			Uint16 *dists = (Uint16 *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(Uint16); i++)
+				SWAP16(dists[i]);
 
 			return true;
 		}
