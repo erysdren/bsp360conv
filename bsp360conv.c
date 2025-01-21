@@ -382,10 +382,9 @@ int main(int argc, char **argv)
 				else if (inputHeader.lumps[lump].identifier != uncompressed_size)
 				{
 					SDL_free(uncompressed);
-					log_warning("Lump %d: Size mismatch %d != %d", lump, inputHeader.lumps[lump].identifier, uncompressed_size);
+					log_warning("Lump %d: Uncompressed size mismatch %d != %d", lump, inputHeader.lumps[lump].identifier, uncompressed_size);
 					goto cleanup;
 				}
-
 
 				/* byteswap data */
 				if (!swap_lump(lump, uncompressed, uncompressed_size))
