@@ -34,23 +34,6 @@ typedef struct plane {
 	Sint32 type;
 } plane_t;
 
-typedef struct edge {
-	Uint16 indices[2];
-} edge_t;
-
-typedef struct brush {
-	Sint32 first_side;
-	Sint32 num_sides;
-	Sint32 contents;
-} brush_t;
-
-typedef struct brushside {
-	Uint16 plane_num;
-	Sint16 tex_info;
-	Sint16 disp_info;
-	Sint16 bevel;
-} brushside_t;
-
 typedef struct texdata {
 	vector_t reflectivity;
 	Sint32 name_index;
@@ -75,16 +58,6 @@ typedef struct node {
 	Sint16 area;
 	Sint16 pad;
 } node_t;
-
-typedef struct overlay_fade {
-	float min;
-	float max;
-} overlay_fade_t;
-
-typedef struct area {
-	Sint32 num_areaportals;
-	Sint32 first_areaportal;
-} area_t;
 
 typedef struct areaportal {
 	Uint16 portal_key;
@@ -126,6 +99,49 @@ typedef struct leaf {
 	Sint16 leaf_water_id;
 } leaf_t;
 
+typedef struct model {
+	vector_t mins;
+	vector_t maxs;
+	vector_t origin;
+	Sint32 node;
+	Sint32 first_face;
+	Sint32 num_faces;
+} model_t;
+
+typedef struct face {
+	Uint16 plane_num;
+	Uint8 side;
+	Uint8 on_node;
+	Sint32 first_edge;
+	Sint16 num_edges;
+	Sint16 tex_info;
+	Sint16 disp_info;
+	Sint16 surface_fog_volume;
+	Uint8 styles[4];
+	Sint32 light_offset;
+	float area;
+	Sint32 lightmap_mins[2];
+	Sint32 lightmap_maxs[2];
+	Sint32 original_face;
+	Uint16 num_primitives;
+	Uint16 first_primitive;
+	Uint32 smoothing_groups;
+} face_t;
+
+typedef struct primitive {
+	Uint8 type;
+	Uint16 first_index;
+	Uint16 num_indices;
+	Uint16 first_vert;
+	Uint16 num_verts;
+} primitive_t;
+
+typedef struct leaf_water_data {
+	float surface_z;
+	float min_z;
+	Sint16 tex_info;
+} leaf_water_data_t;
+
 static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
@@ -153,7 +169,9 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		case 17:
 		case 19:
 		case 31:
+		case 39:
 		case 46:
+		case 47:
 		case 51:
 		case 52:
 		{
@@ -171,6 +189,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		case 13:
 		case 18:
 		case 20:
+		case 42:
 		case 44:
 		case 59:
 		{
@@ -186,6 +205,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* float-sized data */
 		case 3:
 		case 30:
+		case 38:
 		case 41:
 		case 60:
 		{
@@ -290,7 +310,12 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* occlusion lump */
 		case 9:
 		{
-			return false;
+			/* HACKHACK */
+			Uint32 *temp = (Uint32 *)lump_data;
+			temp[0] = 0;
+			temp[1] = 0;
+			temp[2] = 0;
+			return true;
 		}
 
 		/* leafs */
@@ -320,11 +345,60 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			return true;
 		}
 
+		/* models */
+		case 14:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(model_t));
+
+			model_t *models = (model_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(model_t); i++)
+			{
+				SWAPFLOAT(models[i].mins.x);
+				SWAPFLOAT(models[i].mins.y);
+				SWAPFLOAT(models[i].mins.z);
+				SWAPFLOAT(models[i].maxs.x);
+				SWAPFLOAT(models[i].maxs.y);
+				SWAPFLOAT(models[i].maxs.z);
+				SWAPFLOAT(models[i].origin.x);
+				SWAPFLOAT(models[i].origin.y);
+				SWAPFLOAT(models[i].origin.z);
+				SWAP32(models[i].node);
+				SWAP32(models[i].first_face);
+				SWAP32(models[i].num_faces);
+			}
+
+			return true;
+		}
+
 		/* faces (ldr and hdr) */
 		case 7:
+		case 27:
 		case 58:
 		{
-			return false;
+			CHECK_FUNNY_LUMP_SIZE(sizeof(face_t));
+
+			face_t *faces = (face_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(face_t); i++)
+			{
+				SWAP16(faces[i].plane_num);
+				SWAP32(faces[i].first_edge);
+				SWAP16(faces[i].num_edges);
+				SWAP16(faces[i].tex_info);
+				SWAP16(faces[i].disp_info);
+				SWAP16(faces[i].surface_fog_volume);
+				SWAP32(faces[i].light_offset);
+				SWAPFLOAT(faces[i].area);
+				SWAP32(faces[i].lightmap_mins[0]);
+				SWAP32(faces[i].lightmap_mins[1]);
+				SWAP32(faces[i].lightmap_maxs[0]);
+				SWAP32(faces[i].lightmap_maxs[1]);
+				SWAP32(faces[i].original_face);
+				SWAP16(faces[i].num_primitives);
+				SWAP16(faces[i].first_primitive);
+				SWAP32(faces[i].smoothing_groups);
+			}
+
+			return true;
 		}
 
 		/* world lights (ldr and hdr) */
@@ -376,6 +450,57 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				SWAP16(areaportals[i].first_clip_vert);
 				SWAP16(areaportals[i].num_clip_verts);
 				SWAP32(areaportals[i].plane_num);
+			}
+
+			return true;
+		}
+
+		/* phys disp */
+		case 28:
+		{
+			/* HACKHACK */
+			Uint16 *temp = (Uint16 *)lump_data;
+			*temp = 0;
+			return true;
+		}
+
+		/* game lumps */
+		case 35:
+		{
+			/* HACKHACK */
+			Uint32 *temp = (Uint32 *)lump_data;
+			*temp = 0;
+			return true;
+		}
+
+		/* leaf water data */
+		case 36:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(leaf_water_data_t));
+
+			leaf_water_data_t *leaf_water_datas = (leaf_water_data_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(leaf_water_data_t); i++)
+			{
+				SWAPFLOAT(leaf_water_datas[i].surface_z);
+				SWAPFLOAT(leaf_water_datas[i].min_z);
+				SWAP16(leaf_water_datas[i].tex_info);
+			}
+
+			return true;
+		}
+
+		/* primtiives */
+		case 37:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(primitive_t));
+
+			primitive_t *primitives = (primitive_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(primitive_t); i++)
+			{
+				SWAP16(primitives[i].first_index);
+				SWAP16(primitives[i].num_indices);
+				SWAP16(primitives[i].first_vert);
+				SWAP16(primitives[i].num_verts);
 			}
 
 			return true;
