@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import struct
-from formats.bsp360 import Bsp360
+from bsp360 import Bsp360
 
 bsp360 = Bsp360.from_file("xbla_1.360.bsp")
 
