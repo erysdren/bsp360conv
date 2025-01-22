@@ -1,8 +1,9 @@
 # bsp360conv
 
-Convert Xbox 360 Source Engine maps to PC.
+Convert Xbox 360 Source Engine maps to PC. This tool relies on the SDL3 and xz
+libraries.
 
-NOTE: DOES NOT WORK YET
+**NOTE: DOES NOT WORK YET**
 
 ## License
 
