@@ -185,7 +185,6 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		}
 
 		/* int-sized data */
-		case 4:
 		case 13:
 		case 18:
 		case 20:
@@ -254,6 +253,16 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				SWAP32(texdata[i].view_height);
 			}
 
+			return true;
+		}
+
+		/* visibility */
+		case 4:
+		{
+			Uint32 *vis = (Uint32 *)lump_data;
+			SWAP32(vis[0]);
+			for (int i = 0; i < vis[0] * 2; i++)
+				SWAP32(vis[i + 1]);
 			return true;
 		}
 
