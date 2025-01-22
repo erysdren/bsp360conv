@@ -3,9 +3,7 @@
 #include <lzma.h>
 
 #include "decompress_lzma.h"
-
-#define log_warning(...) SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)
-#define log_info(...) SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)
+#include "utils.h"
 
 #define LZMA_MAGIC 0x414d5a4c
 
