@@ -142,6 +142,13 @@ typedef struct leaf_water_data {
 	Sint16 tex_info;
 } leaf_water_data_t;
 
+typedef struct phys_model {
+	Sint32 model_index;
+	Sint32 len_data;
+	Sint32 len_key_data;
+	Sint32 num_solids;
+} phys_model_t;
+
 static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
@@ -470,6 +477,18 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 			/* HACKHACK */
 			Uint16 *temp = (Uint16 *)lump_data;
 			*temp = 0;
+			return true;
+		}
+
+		/* phys models */
+		case 29:
+		{
+			/* HACKHACK */
+			phys_model_t *temp = (phys_model_t *)lump_data;
+			temp->model_index = -1;
+			temp->len_data = -1;
+			temp->len_key_data = -1;
+			temp->num_solids = -1;
 			return true;
 		}
 
