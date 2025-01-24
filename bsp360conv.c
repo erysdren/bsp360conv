@@ -149,6 +149,18 @@ typedef struct phys_model {
 	Sint32 num_solids;
 } phys_model_t;
 
+typedef struct phys_solid {
+	Sint32 id;
+	Sint16 version;
+	Sint16 type;
+} phys_solid_t;
+
+typedef struct phys_surface {
+	Sint32 surface_size;
+	vector_t axis;
+	Sint32 axis_size;
+} phys_surface_t;
+
 typedef struct overlay {
 	Sint32 id;
 	Sint16 tex_info;
@@ -495,16 +507,50 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* phys models */
 		case 29:
 		{
-			/* HACKHACK */
-			phys_model_t *temp = (phys_model_t *)lump_data;
-			temp[0].model_index = 1;
-			temp[0].len_data = 0;
-			temp[0].len_key_data = 0;
-			temp[0].num_solids = 0;
-			temp[1].model_index = -1;
-			temp[1].len_data = -1;
-			temp[1].len_key_data = 0;
-			temp[1].num_solids = 0;
+			Uint8 *ptr = (Uint8 *)lump_data;
+
+			while (1)
+			{
+				phys_model_t *header = (phys_model_t *)ptr;
+
+				SWAP32(header->model_index);
+				SWAP32(header->len_data);
+				SWAP32(header->len_key_data);
+				SWAP32(header->num_solids);
+
+				if (header->model_index < 0 || header->len_data < 0)
+					break;
+
+				ptr += sizeof(phys_model_t);
+
+				/* phy data */
+				for (int solid = 0; solid < header->num_solids; solid++)
+				{
+					SWAP32(*(Uint32 *)ptr);
+					Uint32 size = *(Uint32 *)ptr;
+					ptr += 4;
+
+					phys_solid_t *solid = (phys_solid_t *)ptr;
+
+					SWAP32(solid->id);
+					SWAP16(solid->version);
+					SWAP16(solid->type);
+
+					phys_surface_t *surface = (phys_surface_t *)(ptr + sizeof(phys_solid_t));
+
+					SWAP32(surface->surface_size);
+					SWAPFLOAT(surface->axis.x);
+					SWAPFLOAT(surface->axis.y);
+					SWAPFLOAT(surface->axis.z);
+					SWAP32(surface->axis_size);
+
+					ptr += size;
+				}
+
+				/* text data */
+				ptr += header->len_key_data;
+			}
+
 			return true;
 		}
 
