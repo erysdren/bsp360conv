@@ -497,10 +497,14 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		{
 			/* HACKHACK */
 			phys_model_t *temp = (phys_model_t *)lump_data;
-			temp->model_index = -1;
-			temp->len_data = -1;
-			temp->len_key_data = -1;
-			temp->num_solids = -1;
+			temp[0].model_index = 1;
+			temp[0].len_data = 0;
+			temp[0].len_key_data = 0;
+			temp[0].num_solids = 0;
+			temp[1].model_index = -1;
+			temp[1].len_data = -1;
+			temp[1].len_key_data = 0;
+			temp[1].num_solids = 0;
 			return true;
 		}
 
