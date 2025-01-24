@@ -149,6 +149,18 @@ typedef struct phys_model {
 	Sint32 num_solids;
 } phys_model_t;
 
+typedef struct overlay {
+	Sint32 id;
+	Sint16 tex_info;
+	Uint16 num_faces;
+	Sint32 faces[64];
+	float u[2];
+	float v[2];
+	vector_t points[4];
+	vector_t origin;
+	vector_t normal;
+} overlay_t;
+
 static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
@@ -529,6 +541,40 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				SWAP16(primitives[i].num_indices);
 				SWAP16(primitives[i].first_vert);
 				SWAP16(primitives[i].num_verts);
+			}
+
+			return true;
+		}
+
+		/* overlays */
+		case 45:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(overlay_t));
+
+			overlay_t *overlays = (overlay_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(overlay_t); i++)
+			{
+				SWAP32(overlays[i].id);
+				SWAP16(overlays[i].tex_info);
+				SWAP16(overlays[i].num_faces);
+				for (int j = 0; j < 64; j++)
+					SWAP32(overlays[i].faces[j]);
+				SWAPFLOAT(overlays[i].u[0]);
+				SWAPFLOAT(overlays[i].u[1]);
+				SWAPFLOAT(overlays[i].v[0]);
+				SWAPFLOAT(overlays[i].v[1]);
+				for (int j = 0; j < 4; j++)
+				{
+					SWAPFLOAT(overlays[i].points[j].x);
+					SWAPFLOAT(overlays[i].points[j].y);
+					SWAPFLOAT(overlays[i].points[j].z);
+				}
+				SWAPFLOAT(overlays[i].origin.x);
+				SWAPFLOAT(overlays[i].origin.y);
+				SWAPFLOAT(overlays[i].origin.z);
+				SWAPFLOAT(overlays[i].normal.x);
+				SWAPFLOAT(overlays[i].normal.y);
+				SWAPFLOAT(overlays[i].normal.z);
 			}
 
 			return true;
