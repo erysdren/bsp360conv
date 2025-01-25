@@ -7,11 +7,17 @@
 
 #define LZMA_MAGIC 0x414d5a4c
 
+#pragma pack(push, 1)
+
 typedef struct lzma_header {
 	Uint8 properties;
 	Uint32 dictionary_size;
 	Uint64 uncompressed_size;
-} __attribute__((packed)) lzma_header_t;
+} lzma_header_t;
+
+SDL_COMPILE_TIME_ASSERT(lzma_header_size, sizeof(lzma_header_t) == 13);
+
+#pragma pack(pop)
 
 typedef struct lzma_source_header {
 	Uint32 magic;
