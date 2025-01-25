@@ -173,7 +173,22 @@ typedef struct overlay {
 	vector_t normal;
 } overlay_t;
 
-static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
+typedef struct occluder_data {
+	Sint32 flags;
+	Sint32 first_poly;
+	Sint32 num_polys;
+	vector_t mins;
+	vector_t maxs;
+	Sint32 area;
+} occluder_data_t;
+
+typedef struct occluder_poly_data {
+	Sint32 first_vert;
+	Sint32 num_verts;
+	Sint32 plane_num;
+} occluder_poly_data_t;
+
+static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
 #define SWAP16(x) x = SDL_Swap16(x)
@@ -350,11 +365,62 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* occlusion lump */
 		case 9:
 		{
-			/* HACKHACK */
-			Uint32 *temp = (Uint32 *)lump_data;
-			temp[0] = 0;
-			temp[1] = 0;
-			temp[2] = 0;
+			Uint8 *ptr = (Uint8 *)lump_data;
+			Uint32 *count = (Uint32 *)ptr;
+			SWAP32(*count);
+			ptr += 4;
+
+			for (int i = 0; i < *count; i++)
+			{
+				occluder_data_t *occluder_data = (occluder_data_t *)ptr;
+
+				SWAP32(occluder_data[0].flags);
+				SWAP32(occluder_data[0].first_poly);
+				SWAP32(occluder_data[0].num_polys);
+
+				SWAPFLOAT(occluder_data[0].mins.x);
+				SWAPFLOAT(occluder_data[0].mins.y);
+				SWAPFLOAT(occluder_data[0].mins.z);
+
+				SWAPFLOAT(occluder_data[0].maxs.x);
+				SWAPFLOAT(occluder_data[0].maxs.y);
+				SWAPFLOAT(occluder_data[0].maxs.z);
+
+				if (lump_version >= 1)
+				{
+					SWAP32(occluder_data[0].area);
+					ptr += 40;
+				}
+				else
+				{
+					ptr += 36;
+				}
+			}
+
+			count = (Uint32 *)ptr;
+			SWAP32(*count);
+			ptr += 4;
+
+			occluder_poly_data_t *occluder_poly_data = (occluder_poly_data_t *)ptr;
+
+			for (int i = 0; i < *count; i++)
+			{
+				SWAP32(occluder_poly_data[i].first_vert);
+				SWAP32(occluder_poly_data[i].num_verts);
+				SWAP32(occluder_poly_data[i].plane_num);
+			}
+
+			count = (Uint32 *)ptr;
+			SWAP32(*count);
+			ptr += 4;
+
+			Uint32 *vertex_indices = (Uint32 *)ptr;
+
+			for (int i = 0; i < *count; i++)
+			{
+				SWAP32(vertex_indices[i]);
+			}
+
 			return true;
 		}
 
@@ -758,7 +824,7 @@ int main(int argc, char **argv)
 				}
 
 				/* byteswap data */
-				if (!swap_lump(lump, uncompressed, uncompressed_size))
+				if (!swap_lump(lump, inputHeader.lumps[lump].version, uncompressed, uncompressed_size))
 				{
 					log_warning("Lump %d: Failed to byteswap data", lump);
 					inputHeader.lumps[lump].offset = 0;
@@ -784,7 +850,7 @@ int main(int argc, char **argv)
 				SDL_ReadIO(inputIo, lump_data, inputHeader.lumps[lump].length);
 
 				/* byteswap data */
-				if (!swap_lump(lump, lump_data, inputHeader.lumps[lump].length))
+				if (!swap_lump(lump, inputHeader.lumps[lump].version, lump_data, inputHeader.lumps[lump].length))
 				{
 					log_warning("Lump %d: Failed to byteswap data", lump);
 					inputHeader.lumps[lump].offset = 0;
