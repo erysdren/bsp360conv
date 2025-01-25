@@ -498,9 +498,10 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 		/* phys disp */
 		case 28:
 		{
-			/* HACKHACK */
-			Uint16 *temp = (Uint16 *)lump_data;
-			*temp = 0;
+			Uint16 *ptr = (Uint16 *)lump_data;
+			SWAP16(ptr[0]);
+			for (int i = 0; i < ptr[0]; i++)
+				SWAP16(ptr[i + 1]);
 			return true;
 		}
 
