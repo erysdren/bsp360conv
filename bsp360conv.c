@@ -524,7 +524,7 @@ static bool swap_lump(int lump, void *lump_data, Sint64 lump_size)
 				ptr += sizeof(phys_model_t);
 
 				/* phy data */
-				for (int solid = 0; solid < header->num_solids; solid++)
+				for (int i = 0; i < header->num_solids; i++)
 				{
 					SWAP32(*(Uint32 *)ptr);
 					Uint32 size = *(Uint32 *)ptr;
