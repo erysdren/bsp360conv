@@ -188,6 +188,36 @@ typedef struct occluder_poly_data {
 	Sint32 plane_num;
 } occluder_poly_data_t;
 
+typedef struct disp_edge_neighbor {
+	Uint16 neighbor_index;
+	Uint8 neighbor_orientation;
+	Uint8 span;
+	Uint8 neighbor_span;
+} disp_edge_neighbor_t;
+
+typedef struct disp_corner_neighbor {
+	Uint16 neighbors[4];
+	Uint8 num_neighbors;
+} disp_corner_neighbor_t;
+
+typedef struct disp_info {
+	vector_t start_position;
+	Sint32 first_vert;
+	Sint32 first_tri;
+	Sint32 power;
+	Sint32 min_tess;
+	float smoothing_angle;
+	Sint32 contents;
+	Uint16 map_face;
+	Sint32 first_lightmap_alpha;
+	Sint32 first_lightmap_sample_position;
+	disp_edge_neighbor_t edge_neighbors[4][2];
+	disp_corner_neighbor_t corner_neighbors[4];
+	Uint32 allowed_verts[10];
+} disp_info_t;
+
+SDL_COMPILE_TIME_ASSERT(disp_info_size, sizeof(disp_info_t) == 176);
+
 static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_size)
 {
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
@@ -218,6 +248,7 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 		case 39:
 		case 46:
 		case 47:
+		case 48:
 		case 51:
 		case 52:
 		{
@@ -250,6 +281,7 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 		/* float-sized data */
 		case 3:
 		case 30:
+		case 33:
 		case 38:
 		case 41:
 		case 60:
@@ -556,6 +588,52 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 				SWAP16(areaportals[i].first_clip_vert);
 				SWAP16(areaportals[i].num_clip_verts);
 				SWAP32(areaportals[i].plane_num);
+			}
+
+			return true;
+		}
+
+		/* disp info */
+		case 26:
+		{
+			CHECK_FUNNY_LUMP_SIZE(sizeof(disp_info_t));
+
+			disp_info_t *disp_info = (disp_info_t *)lump_data;
+			for (int i = 0; i < lump_size / sizeof(disp_info_t); i++)
+			{
+				SWAPFLOAT(disp_info[i].start_position.x);
+				SWAPFLOAT(disp_info[i].start_position.y);
+				SWAPFLOAT(disp_info[i].start_position.z);
+				SWAP32(disp_info[i].first_vert);
+				SWAP32(disp_info[i].first_tri);
+				SWAP32(disp_info[i].power);
+				SWAP32(disp_info[i].min_tess);
+				SWAPFLOAT(disp_info[i].smoothing_angle);
+				SWAP32(disp_info[i].contents);
+				SWAP16(disp_info[i].map_face);
+				SWAP32(disp_info[i].first_lightmap_alpha);
+				SWAP32(disp_info[i].first_lightmap_sample_position);
+
+				for (int j = 0; j < 4; j++)
+				{
+					for (int k = 0; k < 2; k++)
+					{
+						SWAP16(disp_info[i].edge_neighbors[j][k].neighbor_index);
+					}
+				}
+
+				for (int j = 0; j < 4; j++)
+				{
+					for (int k = 0; k < 4; k++)
+					{
+						SWAP16(disp_info[i].corner_neighbors[j].neighbors[k]);
+					}
+				}
+
+				for (int j = 0; j < 10; j++)
+				{
+					SWAP32(disp_info[i].allowed_verts[j]);
+				}
 			}
 
 			return true;
