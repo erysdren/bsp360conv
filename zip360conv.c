@@ -11,9 +11,6 @@
 #define ZIP_MAGIC_LOCAL_FILE_HEADER 0x0403
 #define ZIP_MAGIC_CENTRAL_DIR_END 0x0605
 
-#define ZIP_PRELOAD_SECTION_NAME "__preload_section.pre"
-#define ZIP_PRELOAD_SECTION_VERSION 3
-
 typedef struct zip_central_dir_end {
 	Uint16 signature;
 	Uint16 type;
@@ -69,24 +66,6 @@ typedef struct zip_central_dir_entry {
 	char *comment;
 	zip_local_file_header_t local_file_header;
 } zip_central_dir_entry_t;
-
-typedef struct zip_preload_header {
-	Uint32 version;
-	Uint32 num_entries;
-	Uint32 num_preload_entries;
-	Uint32 alignment;
-} zip_preload_header_t;
-
-typedef struct zip_preload_entry {
-	Uint32 len_data;
-	Uint32 ofs_data;
-} zip_preload_entry_t;
-
-typedef struct zip_preload {
-	zip_preload_header_t header;
-	zip_preload_entry_t *entries;
-	Uint16 *remap_table;
-} zip_preload_t;
 
 static void make_output_filename(const char *input, char *output, size_t output_size)
 {
