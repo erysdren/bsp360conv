@@ -175,7 +175,7 @@ static void read_central_dir_entry(SDL_IOStream *io, zip_central_dir_entry_t *en
 
 static void write_central_dir_entry(SDL_IOStream *io, zip_central_dir_entry_t *entry)
 {
-	SDL_WriteIO(io, "PK", 2);
+	SDL_WriteU16LE(io, entry->signature);
 	SDL_WriteU16LE(io, entry->type);
 	SDL_WriteU16LE(io, entry->version_made_with);
 	SDL_WriteU16LE(io, entry->version_needed);
@@ -246,7 +246,7 @@ static void read_local_file_header(SDL_IOStream *io, zip_local_file_header_t *he
 
 static void write_local_file_header(SDL_IOStream *io, zip_local_file_header_t *header)
 {
-	SDL_WriteIO(io, "PK", 2);
+	SDL_WriteU16LE(io, header->signature);
 	SDL_WriteU16LE(io, header->type);
 	SDL_WriteU16LE(io, header->version_needed);
 	SDL_WriteU16LE(io, header->flags);
@@ -285,7 +285,7 @@ static void read_central_dir_end(SDL_IOStream *io, zip_central_dir_end_t *centra
 
 static void write_central_dir_end(SDL_IOStream *io, zip_central_dir_end_t *central_dir_end)
 {
-	SDL_WriteIO(io, "PK", 2);
+	SDL_WriteU16LE(io, central_dir_end->signature);
 	SDL_WriteU16LE(io, central_dir_end->type);
 	SDL_WriteU16LE(io, central_dir_end->disk);
 	SDL_WriteU16LE(io, central_dir_end->disk_with_central_dir);
