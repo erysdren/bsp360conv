@@ -4,11 +4,13 @@ examples/
 *.bsp
 *.zip
 *.vtf
+*.wav
 *.o
 *.obj
 *.exe
 bsp360conv
 zip360conv
 vtf360conv
+wav360conv
 kaitaistruct.py
 bsp360.py
