@@ -1,8 +1,6 @@
 
 #include <SDL3/SDL.h>
 
-#include <stddef.h>
-
 #include "decompress_lzma.h"
 #include "utils.h"
 
