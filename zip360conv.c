@@ -345,15 +345,15 @@ int main(int argc, char **argv)
 		{
 			read_central_dir_entry(inputIo, &entries[entry]);
 
-			if (entries[entry].compression != 0)
-			{
-				log_warning("Compressed files are not supported");
-				goto cleanup;
-			}
-
 			if (entries[entry].signature != ZIP_MAGIC_SIGNATURE || entries[entry].type != ZIP_MAGIC_CENTRAL_DIR_ENTRY)
 			{
 				log_warning("Central directory entry %d failed to validate", entry);
+				goto cleanup;
+			}
+
+			if (entries[entry].compression != 0)
+			{
+				log_warning("Compressed files are not supported");
 				goto cleanup;
 			}
 		}
@@ -363,12 +363,6 @@ int main(int argc, char **argv)
 		{
 			SDL_SeekIO(inputIo, entries[entry].ofs_local_file_header, SDL_IO_SEEK_SET);
 			read_local_file_header(inputIo, &entries[entry].local_file_header);
-
-			if (entries[entry].local_file_header.compression != 0)
-			{
-				log_warning("Compressed files are not supported");
-				goto cleanup;
-			}
 		}
 
 		/* write files */
