@@ -14,8 +14,6 @@
 #define ZIP_PRELOAD_SECTION_NAME "__preload_section.pre"
 #define ZIP_PRELOAD_SECTION_VERSION 3
 
-#pragma pack(push, 1)
-
 typedef struct zip_central_dir_end {
 	Uint16 signature;
 	Uint16 type;
@@ -26,12 +24,8 @@ typedef struct zip_central_dir_end {
 	Uint32 len_directory;
 	Uint32 ofs_directory;
 	Uint16 len_comment;
-	char comment[32];
+	char *comment;
 } zip_central_dir_end_t;
-
-SDL_COMPILE_TIME_ASSERT(zip_central_dir_end_size, sizeof(zip_central_dir_end_t) == 54);
-
-#pragma pack(pop)
 
 typedef struct zip_local_file_header {
 	Uint16 signature;
@@ -280,7 +274,17 @@ static void read_central_dir_end(SDL_IOStream *io, zip_central_dir_end_t *centra
 	SDL_ReadU32LE(io, &central_dir_end->len_directory);
 	SDL_ReadU32LE(io, &central_dir_end->ofs_directory);
 	SDL_ReadU16LE(io, &central_dir_end->len_comment);
-	SDL_ReadIO(io, central_dir_end->comment, 32);
+
+	if (central_dir_end->len_comment)
+	{
+		central_dir_end->comment = SDL_malloc(central_dir_end->len_comment + 1);
+		central_dir_end->comment[central_dir_end->len_comment] = '\0';
+		SDL_ReadIO(io, central_dir_end->comment, central_dir_end->len_comment);
+	}
+	else
+	{
+		central_dir_end->comment = NULL;
+	}
 }
 
 static void write_central_dir_end(SDL_IOStream *io, zip_central_dir_end_t *central_dir_end)
@@ -320,8 +324,9 @@ int main(int argc, char **argv)
 		}
 
 		/* get end of central dir record */
+		/* NOTE: assumes comment length of 32 bytes, which xbox 360 zip use */
 		zip_central_dir_end_t central_dir_end;
-		SDL_SeekIO(inputIo, -sizeof(zip_central_dir_end_t), SDL_IO_SEEK_END);
+		SDL_SeekIO(inputIo, -54, SDL_IO_SEEK_END);
 		read_central_dir_end(inputIo, &central_dir_end);
 
 		/* validate magic */
@@ -404,6 +409,9 @@ int main(int argc, char **argv)
 
 		/* clean up */
 cleanup:
+		if (central_dir_end.comment)
+			SDL_free(central_dir_end.comment);
+
 		if (entries)
 		{
 			for (int entry = 0; entry < central_dir_end.num_entries_total; entry++)
