@@ -8,6 +8,7 @@ examples/
 *.o
 *.obj
 *.exe
+*.ain
 bsp360conv
 zip360conv
 vtf360conv
