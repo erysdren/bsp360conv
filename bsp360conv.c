@@ -681,13 +681,21 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 					SWAP16(solid->version);
 					SWAP16(solid->type);
 
-					phys_surface_t *surface = (phys_surface_t *)(ptr + sizeof(phys_solid_t));
+					if (solid->type == 0)
+					{
+						phys_surface_t *surface = (phys_surface_t *)(ptr + sizeof(phys_solid_t));
 
-					SWAP32(surface->surface_size);
-					SWAPFLOAT(surface->axis.x);
-					SWAPFLOAT(surface->axis.y);
-					SWAPFLOAT(surface->axis.z);
-					SWAP32(surface->axis_size);
+						SWAP32(surface->surface_size);
+						SWAPFLOAT(surface->axis.x);
+						SWAPFLOAT(surface->axis.y);
+						SWAPFLOAT(surface->axis.z);
+						SWAP32(surface->axis_size);
+					}
+					else if (solid->type == 1)
+					{
+						Uint32 *mopp_size = (Uint32 *)(ptr + sizeof(phys_solid_t));
+						SWAP32(*mopp_size);
+					}
 
 					ptr += size;
 				}
