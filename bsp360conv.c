@@ -8,6 +8,9 @@
 #define BSP_VERSION 20
 #define BSP_NUM_LUMPS 64
 
+#define VPHYSICS_MAGIC 0x59485056
+#define VPHYSICS_VERSION 0x100
+
 typedef struct bsp_lump {
 	Uint32 offset;
 	Uint32 length;
@@ -27,6 +30,13 @@ typedef struct vector {
 	float y;
 	float z;
 } vector_t;
+
+typedef struct vec4 {
+	float x;
+	float y;
+	float z;
+	float w;
+} vec4_t;
 
 typedef struct node {
 	Sint32 plane_num;
@@ -113,6 +123,48 @@ typedef struct phys_surface {
 	Sint32 axis_size;
 } phys_surface_t;
 
+typedef struct phys_compact_surface {
+	vector_t mass_center;
+	vector_t rotation_inertia;
+	float upper_limit_radius;
+	Uint32 bitfields;
+	Sint32 ofs_ledgetree_root;
+} phys_compact_surface_t;
+
+typedef struct phys_compact_ledgetree_node {
+	Sint32 ofs_right_node;
+	Sint32 ofs_compact_ledge;
+	vector_t center;
+	float radius;
+	Uint8 box_sizes[3];
+	Uint8 padding;
+} phys_compact_ledgetree_node_t;
+
+typedef struct phys_compact_ledge {
+	Sint32 ofs_point_array;
+	Sint32 ofs_ledgetree_node;
+	Uint32 bitfields;
+	Sint16 num_triangles;
+	Sint16 reserved;
+} phys_compact_ledge_t;
+
+SDL_COMPILE_TIME_ASSERT(phys_compact_ledge_size, sizeof(phys_compact_ledge_t) == 16);
+
+typedef struct phys_compact_edge {
+	Uint32 start_point_index : 16;
+	Sint32 opposite_index : 15;
+	Uint32 is_virtual : 1;
+} phys_compact_edge_t;
+
+SDL_COMPILE_TIME_ASSERT(phys_compact_edge_size, sizeof(phys_compact_edge_t) == 4);
+
+typedef struct phys_compact_triangle {
+	Uint32 bitfields;
+	phys_compact_edge_t edges[3];
+} phys_compact_triangle_t;
+
+SDL_COMPILE_TIME_ASSERT(phys_compact_triangle_size, sizeof(phys_compact_triangle_t) == 16);
+
 typedef struct overlay {
 	Sint32 id;
 	Sint16 tex_info;
@@ -170,13 +222,112 @@ typedef struct disp_info {
 
 SDL_COMPILE_TIME_ASSERT(disp_info_size, sizeof(disp_info_t) == 176);
 
-static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_size)
-{
 #define CHECK_FUNNY_LUMP_SIZE(s) if (lump_size % s != 0) return false;
 #define SWAP16(x) x = SDL_Swap16(x)
 #define SWAP32(x) x = SDL_Swap32(x)
 #define SWAPFLOAT(x) x = SDL_SwapFloat(x)
 #define SWAPVECTOR(v) (SWAPFLOAT(v.x), SWAPFLOAT(v.y), SWAPFLOAT(v.z))
+#define SWAPVEC4(v) (SWAPFLOAT(v.x), SWAPFLOAT(v.y), SWAPFLOAT(v.z), SWAPFLOAT(v.w))
+
+static void swap_compact_edge(phys_compact_edge_t *edge)
+{
+	Uint32 *bitfields = (Uint32 *)edge;
+
+	Uint32 bitfield0 = (*bitfields & 0x0000FFFF) << 16;
+	Uint32 bitfield1 = (*bitfields & 0x7FFF0000) >> 15;
+	Uint32 bitfield2 = (*bitfields & 0x80000000) >> 31;
+
+	*bitfields = bitfield0 | bitfield1 | bitfield2;
+
+	SWAP32(*bitfields);
+}
+
+static void swap_compact_triangle(phys_compact_triangle_t *triangle)
+{
+	Uint32 bitfield0 = (triangle->bitfields & 0x00000FFF) << 20;
+	Uint32 bitfield1 = (triangle->bitfields & 0x00FFF000) >> 4;
+	Uint32 bitfield2 = (triangle->bitfields & 0x7F000000) >> 23;
+	Uint32 bitfield3 = (triangle->bitfields & 0x80000000) >> 31;
+
+	triangle->bitfields = bitfield0 | bitfield1 | bitfield2 | bitfield3;
+
+	SWAP32(triangle->bitfields);
+
+	for (int i = 0; i < 3; i++)
+		swap_compact_edge(&triangle->edges[i]);
+}
+
+static void swap_compact_ledge(phys_compact_ledge_t *ledge)
+{
+	SWAP32(ledge->ofs_point_array);
+	SWAP32(ledge->ofs_ledgetree_node);
+
+	Uint32 bitfield0 = ledge->bitfields << 24;
+	Uint32 bitfield00 = bitfield0 & 0x03000000;
+	Uint32 bitfield01 = bitfield0 & 0x0C000000;
+	Uint32 bitfield02 = bitfield0 & 0xF0000000;
+
+	ledge->bitfields = ((bitfield00 << 6) | (bitfield01 << 2) | (bitfield02 >> 4)) | (ledge->bitfields >> 8);
+
+	SWAP32(ledge->bitfields);
+
+	SWAP16(ledge->num_triangles);
+	SWAP16(ledge->reserved);
+
+	/* swap triangles and points */
+	/* TODO: how big should this be?? */
+	bool *swapped_points = SDL_calloc(1024, sizeof(bool));
+
+	vec4_t *points = (vec4_t *)((Uint8 *)ledge + ledge->ofs_point_array);
+	phys_compact_triangle_t *triangles = (phys_compact_triangle_t *)(ledge + 1);
+	for (int i = 0; i < ledge->num_triangles; i++)
+	{
+		swap_compact_triangle(&triangles[i]);
+
+		/* swap points */
+		Uint32 p0, p1, p2;
+		p0 = triangles[i].edges[0].start_point_index;
+		p1 = triangles[i].edges[1].start_point_index;
+		p2 = triangles[i].edges[2].start_point_index;
+
+#define PROCESS_POINT(n) if (swapped_points[n] == false) { SWAPVEC4(points[n]); swapped_points[n] = true; }
+		PROCESS_POINT(p0);
+		PROCESS_POINT(p1);
+		PROCESS_POINT(p2);
+#undef PROCESS_POINT
+
+		/*
+		log_info("%d: %0.4f %0.4f %0.4f %0.4f", p0, points[p0].x, points[p0].y, points[p0].z, points[p0].w);
+		log_info("%d: %0.4f %0.4f %0.4f %0.4f", p1, points[p1].x, points[p1].y, points[p1].z, points[p1].w);
+		log_info("%d: %0.4f %0.4f %0.4f %0.4f", p2, points[p2].x, points[p2].y, points[p2].z, points[p2].w);
+		*/
+	}
+
+	SDL_free(swapped_points);
+}
+
+static void swap_ledgetree_node(phys_compact_ledgetree_node_t *ltn)
+{
+	SWAP32(ltn->ofs_right_node);
+	SWAP32(ltn->ofs_compact_ledge);
+	SWAPVECTOR(ltn->center);
+	SWAPFLOAT(ltn->radius);
+
+	/* has children */
+	if (ltn->ofs_right_node != 0)
+	{
+		/* left child */
+		phys_compact_ledgetree_node_t *left = ltn + 1;
+		swap_ledgetree_node(left);
+
+		/* right child */
+		phys_compact_ledgetree_node_t *right = (phys_compact_ledgetree_node_t *)((Uint8 *)ltn + ltn->ofs_right_node);
+		swap_ledgetree_node(right);
+	}
+}
+
+static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_size)
+{
 	switch (lump)
 	{
 		/* byte-sized data */
@@ -498,18 +649,83 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 					SWAP16(solid->version);
 					SWAP16(solid->type);
 
-					if (solid->type == 0)
+					/* sanity check */
+					if (solid->id != VPHYSICS_MAGIC)
 					{
+						log_warning("solid %d has incorrect magic value 0x%08x (should be 0x%08x)", i, solid->id, VPHYSICS_MAGIC);
+						continue;
+					}
+
+					/* sanity check */
+					if (solid->version != VPHYSICS_VERSION)
+					{
+						log_warning("solid %d has incorrect version value 0x%04x (should be 0x%04x)", i, solid->version, VPHYSICS_VERSION);
+						continue;
+					}
+
+					if (solid->type == 0) /* poly */
+					{
+						/* swap nasty ivp shit */
 						phys_surface_t *surface = (phys_surface_t *)(ptr + sizeof(phys_solid_t));
 
 						SWAP32(surface->surface_size);
 						SWAPVECTOR(surface->axis);
 						SWAP32(surface->axis_size);
+
+						phys_compact_surface_t *compact_surface = (phys_compact_surface_t *)(surface + 1);
+
+						SWAPVECTOR(compact_surface->mass_center);
+						SWAPVECTOR(compact_surface->rotation_inertia);
+						SWAPFLOAT(compact_surface->upper_limit_radius);
+
+						Uint8 max_factor_surface_deviation = compact_surface->bitfields & 0xFF;
+						Uint32 byte_size = (compact_surface->bitfields & 0xFFFFFF00);
+
+						SWAP32(byte_size);
+
+						compact_surface->bitfields = byte_size << 8 | max_factor_surface_deviation;
+
+						SWAP32(compact_surface->ofs_ledgetree_root);
+
+						/* sanity check */
+						if (byte_size != surface->surface_size)
+						{
+							log_warning("solid %d: size mismatch", i);
+							return false;
+						}
+
+						/* get ledgetree node root */
+						phys_compact_ledgetree_node_t *ltn = (phys_compact_ledgetree_node_t *)((Uint8 *)compact_surface + compact_surface->ofs_ledgetree_root);
+
+						/* recurse tree */
+						swap_ledgetree_node(ltn);
+
+						/* has compact ledge */
+						if (ltn->ofs_compact_ledge != 0)
+						{
+							phys_compact_ledge_t *ledge = (phys_compact_ledge_t *)((Uint8 *)ltn + ltn->ofs_compact_ledge);
+							swap_compact_ledge(ledge);
+						}
 					}
-					else if (solid->type == 1)
+					else if (solid->type == 1) /* mopp */
 					{
-						Uint32 *mopp_size = (Uint32 *)(ptr + sizeof(phys_solid_t));
-						SWAP32(*mopp_size);
+						log_warning("solid %d: COLLIDE_MOPP unsupported", i);
+						return false;
+					}
+					else if (solid->type == 2) /* ball */
+					{
+						log_warning("solid %d: COLLIDE_BALL unsupported", i);
+						return false;
+					}
+					else if (solid->type == 3) /* virtual */
+					{
+						log_warning("solid %d: COLLIDE_VIRTUAL unsupported", i);
+						return false;
+					}
+					else /* unknown */
+					{
+						log_warning("solid %d: unknown type %d", i, solid->type);
+						return false;
 					}
 
 					ptr += size;
@@ -603,12 +819,13 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 			return false;
 		}
 	}
+}
+
 #undef SWAPVECTOR
 #undef SWAPFLOAT
 #undef SWAP32
 #undef SWAP16
 #undef CHECK_FUNNY_LUMP_SIZE
-}
 
 static void read_bsp_lump(SDL_IOStream *io, bsp_lump_t *lump)
 {
