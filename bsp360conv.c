@@ -28,26 +28,6 @@ typedef struct vector {
 	float z;
 } vector_t;
 
-typedef struct plane {
-	vector_t normal;
-	float dist;
-	Sint32 type;
-} plane_t;
-
-typedef struct texdata {
-	vector_t reflectivity;
-	Sint32 name_index;
-	Sint32 width, height;
-	Sint32 view_width, view_height;
-} texdata_t;
-
-typedef struct texinfo {
-	float texture_vectors[2][4];
-	float lightmap_vectors[2][4];
-	Sint32 flags;
-	Sint32 tex_data;
-} texinfo_t;
-
 typedef struct node {
 	Sint32 plane_num;
 	Sint32 children[2];
@@ -67,25 +47,6 @@ typedef struct areaportal {
 	Sint32 plane_num;
 } areaportal_t;
 
-typedef struct worldlight {
-	vector_t origin;
-	vector_t intensity;
-	vector_t normal;
-	Sint32 cluster;
-	Sint32 type;
-	Sint32 style;
-	float stop_dot;
-	float stop_dot_2;
-	float exponent;
-	float radius;
-	float constant_attenuation;
-	float linear_attenuation;
-	float quadratic_attenuation;
-	Sint32 flags;
-	Sint32 tex_info;
-	Sint32 owner;
-} worldlight_t;
-
 typedef struct leaf {
 	Sint32 contents;
 	Sint16 cluster;
@@ -98,15 +59,6 @@ typedef struct leaf {
 	Uint16 num_leaf_brushes;
 	Sint16 leaf_water_id;
 } leaf_t;
-
-typedef struct model {
-	vector_t mins;
-	vector_t maxs;
-	vector_t origin;
-	Sint32 node;
-	Sint32 first_face;
-	Sint32 num_faces;
-} model_t;
 
 typedef struct face {
 	Uint16 plane_num;
@@ -227,30 +179,30 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 	switch (lump)
 	{
 		/* byte-sized data */
-		case 0:
-		case 8:
-		case 34:
-		case 43:
-		case 53:
-		case 55:
-		case 56:
+		case 0: /* entities */
+		case 8: /* ldr lighting samples */
+		case 34: /* displacement lightmap sample positions */
+		case 43: /* texdata string data */
+		case 53: /* hdr lighting samples */
+		case 55: /* hdr ambient lighting samples  */
+		case 56: /* ldr ambient lighting samples */
 		{
 			return true;
 		}
 
 		/* short-sized data */
-		case 11:
-		case 12:
-		case 16:
-		case 17:
-		case 19:
-		case 31:
-		case 39:
-		case 46:
-		case 47:
-		case 48:
-		case 51:
-		case 52:
+		case 11: /* face ids */
+		case 12: /* edges */
+		case 16: /* leaf faces */
+		case 17: /* leaf brushes */
+		case 19: /* brush sides */
+		case 31: /* vertex normal indices */
+		case 39: /* primitive vertex indices */
+		case 46: /* leaf distances to water */
+		case 47: /* face macro texture info */
+		case 48: /* displacement triangles */
+		case 51: /* index of hdr lighting samples */
+		case 52: /* index of ldr lighting samples */
 		{
 			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint16));
 
@@ -262,74 +214,30 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 		}
 
 		/* int-sized data */
-		case 13:
-		case 18:
-		case 20:
-		case 42:
-		case 44:
-		case 59:
+		case 1: /* planes */
+		case 2: /* texdata */
+		case 3: /* vertices */
+		case 6: /* texinfos */
+		case 13: /* surfedges */
+		case 14: /* models */
+		case 15: /* ldr world lights */
+		case 18: /* brushes */
+		case 20: /* areas */
+		case 30: /* vertex normals */
+		case 33: /* displacement vertices */
+		case 38: /* primitive vertices */
+		case 41: /* clip portal vertices */
+		case 42: /* cubemaps */
+		case 44: /* texdata string table */
+		case 54: /* hdr world lights */
+		case 59: /* map flags */
+		case 60: /* overlay fade distances */
 		{
 			CHECK_FUNNY_LUMP_SIZE(sizeof(Uint32));
 
 			Uint32 *values = (Uint32 *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(Uint32); i++)
 				SWAP32(values[i]);
-
-			return true;
-		}
-
-		/* float-sized data */
-		case 3:
-		case 30:
-		case 33:
-		case 38:
-		case 41:
-		case 60:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(float));
-
-			float *values = (float *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(float); i++)
-				SWAPFLOAT(values[i]);
-
-			return true;
-		}
-
-		/* planes */
-		case 1:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(plane_t));
-
-			plane_t *planes = (plane_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(plane_t); i++)
-			{
-				SWAPFLOAT(planes[i].normal.x);
-				SWAPFLOAT(planes[i].normal.y);
-				SWAPFLOAT(planes[i].normal.z);
-				SWAPFLOAT(planes[i].dist);
-				SWAP32(planes[i].type);
-			}
-
-			return true;
-		}
-
-		/* texdata */
-		case 2:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(texdata_t));
-
-			texdata_t *texdata = (texdata_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(texdata_t); i++)
-			{
-				SWAPFLOAT(texdata[i].reflectivity.x);
-				SWAPFLOAT(texdata[i].reflectivity.y);
-				SWAPFLOAT(texdata[i].reflectivity.z);
-				SWAP32(texdata[i].name_index);
-				SWAP32(texdata[i].width);
-				SWAP32(texdata[i].height);
-				SWAP32(texdata[i].view_width);
-				SWAP32(texdata[i].view_height);
-			}
 
 			return true;
 		}
@@ -365,30 +273,6 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 				SWAP16(nodes[i].num_faces);
 				SWAP16(nodes[i].area);
 				SWAP16(nodes[i].pad);
-			}
-
-			return true;
-		}
-
-		/* texinfos */
-		case 6:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(texinfo_t));
-
-			texinfo_t *texinfos = (texinfo_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(texinfo_t); i++)
-			{
-				for (int j = 0; j < 2; j++)
-				{
-					for (int k = 0; k < 4; k++)
-					{
-						SWAPFLOAT(texinfos[i].texture_vectors[j][k]);
-						SWAPFLOAT(texinfos[i].lightmap_vectors[j][k]);
-					}
-				}
-
-				SWAP32(texinfos[i].flags);
-				SWAP32(texinfos[i].tex_data);
 			}
 
 			return true;
@@ -483,31 +367,6 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 			return true;
 		}
 
-		/* models */
-		case 14:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(model_t));
-
-			model_t *models = (model_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(model_t); i++)
-			{
-				SWAPFLOAT(models[i].mins.x);
-				SWAPFLOAT(models[i].mins.y);
-				SWAPFLOAT(models[i].mins.z);
-				SWAPFLOAT(models[i].maxs.x);
-				SWAPFLOAT(models[i].maxs.y);
-				SWAPFLOAT(models[i].maxs.z);
-				SWAPFLOAT(models[i].origin.x);
-				SWAPFLOAT(models[i].origin.y);
-				SWAPFLOAT(models[i].origin.z);
-				SWAP32(models[i].node);
-				SWAP32(models[i].first_face);
-				SWAP32(models[i].num_faces);
-			}
-
-			return true;
-		}
-
 		/* faces (ldr and hdr) */
 		case 7:
 		case 27:
@@ -534,42 +393,6 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 				SWAP16(faces[i].num_primitives);
 				SWAP16(faces[i].first_primitive);
 				SWAP32(faces[i].smoothing_groups);
-			}
-
-			return true;
-		}
-
-		/* world lights (ldr and hdr) */
-		case 15:
-		case 54:
-		{
-			CHECK_FUNNY_LUMP_SIZE(sizeof(worldlight_t));
-
-			worldlight_t *worldlights = (worldlight_t *)lump_data;
-			for (int i = 0; i < lump_size / sizeof(worldlight_t); i++)
-			{
-				SWAPFLOAT(worldlights[i].origin.x);
-				SWAPFLOAT(worldlights[i].origin.y);
-				SWAPFLOAT(worldlights[i].origin.z);
-				SWAPFLOAT(worldlights[i].intensity.x);
-				SWAPFLOAT(worldlights[i].intensity.y);
-				SWAPFLOAT(worldlights[i].intensity.z);
-				SWAPFLOAT(worldlights[i].normal.x);
-				SWAPFLOAT(worldlights[i].normal.y);
-				SWAPFLOAT(worldlights[i].normal.z);
-				SWAP32(worldlights[i].cluster);
-				SWAP32(worldlights[i].type);
-				SWAP32(worldlights[i].style);
-				SWAPFLOAT(worldlights[i].stop_dot);
-				SWAPFLOAT(worldlights[i].stop_dot_2);
-				SWAPFLOAT(worldlights[i].exponent);
-				SWAPFLOAT(worldlights[i].radius);
-				SWAPFLOAT(worldlights[i].constant_attenuation);
-				SWAPFLOAT(worldlights[i].linear_attenuation);
-				SWAPFLOAT(worldlights[i].quadratic_attenuation);
-				SWAP32(worldlights[i].flags);
-				SWAP32(worldlights[i].tex_info);
-				SWAP32(worldlights[i].owner);
 			}
 
 			return true;
