@@ -176,6 +176,7 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 #define SWAP16(x) x = SDL_Swap16(x)
 #define SWAP32(x) x = SDL_Swap32(x)
 #define SWAPFLOAT(x) x = SDL_SwapFloat(x)
+#define SWAPVECTOR(v) (SWAPFLOAT(v.x), SWAPFLOAT(v.y), SWAPFLOAT(v.z))
 	switch (lump)
 	{
 		/* byte-sized data */
@@ -294,13 +295,8 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 				SWAP32(occluder_data[0].first_poly);
 				SWAP32(occluder_data[0].num_polys);
 
-				SWAPFLOAT(occluder_data[0].mins.x);
-				SWAPFLOAT(occluder_data[0].mins.y);
-				SWAPFLOAT(occluder_data[0].mins.z);
-
-				SWAPFLOAT(occluder_data[0].maxs.x);
-				SWAPFLOAT(occluder_data[0].maxs.y);
-				SWAPFLOAT(occluder_data[0].maxs.z);
+				SWAPVECTOR(occluder_data[0].mins);
+				SWAPVECTOR(occluder_data[0].maxs);
 
 				if (lump_version >= 1)
 				{
@@ -424,9 +420,7 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 			disp_info_t *disp_info = (disp_info_t *)lump_data;
 			for (int i = 0; i < lump_size / sizeof(disp_info_t); i++)
 			{
-				SWAPFLOAT(disp_info[i].start_position.x);
-				SWAPFLOAT(disp_info[i].start_position.y);
-				SWAPFLOAT(disp_info[i].start_position.z);
+				SWAPVECTOR(disp_info[i].start_position);
 				SWAP32(disp_info[i].first_vert);
 				SWAP32(disp_info[i].first_tri);
 				SWAP32(disp_info[i].power);
@@ -509,9 +503,7 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 						phys_surface_t *surface = (phys_surface_t *)(ptr + sizeof(phys_solid_t));
 
 						SWAP32(surface->surface_size);
-						SWAPFLOAT(surface->axis.x);
-						SWAPFLOAT(surface->axis.y);
-						SWAPFLOAT(surface->axis.z);
+						SWAPVECTOR(surface->axis);
 						SWAP32(surface->axis_size);
 					}
 					else if (solid->type == 1)
@@ -590,17 +582,9 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 				SWAPFLOAT(overlays[i].v[0]);
 				SWAPFLOAT(overlays[i].v[1]);
 				for (int j = 0; j < 4; j++)
-				{
-					SWAPFLOAT(overlays[i].points[j].x);
-					SWAPFLOAT(overlays[i].points[j].y);
-					SWAPFLOAT(overlays[i].points[j].z);
-				}
-				SWAPFLOAT(overlays[i].origin.x);
-				SWAPFLOAT(overlays[i].origin.y);
-				SWAPFLOAT(overlays[i].origin.z);
-				SWAPFLOAT(overlays[i].normal.x);
-				SWAPFLOAT(overlays[i].normal.y);
-				SWAPFLOAT(overlays[i].normal.z);
+					SWAPVECTOR(overlays[i].points[j]);
+				SWAPVECTOR(overlays[i].origin);
+				SWAPVECTOR(overlays[i].normal);
 			}
 
 			return true;
@@ -612,6 +596,7 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 			return false;
 		}
 	}
+#undef SWAPVECTOR
 #undef SWAPFLOAT
 #undef SWAP32
 #undef SWAP16
