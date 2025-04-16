@@ -564,6 +564,13 @@ static bool swap_lump(int lump, int lump_version, void *lump_data, Sint64 lump_s
 			return true;
 		}
 
+		/* pakfile */
+		case 40:
+		{
+			/* TODO */
+			return false;
+		}
+
 		/* overlays */
 		case 45:
 		{
